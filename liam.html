@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Jardín de la Rosa - Interactivo</title>
+
+  <style>
+    /* Reset */
+    * { box-sizing:border-box; margin:0; padding:0; }
+    html,body,#app { height:100%; }
+
+    body {
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      overflow:hidden;
+      background:linear-gradient(#cfeeff 0%, #dff4ff 60%);
+    }
+
+    /* 🔥 ELIMINA EL RECTÁNGULO BLANCO */
+    *:focus { outline:none !important; }
+    .petalGroup:focus { outline:none !important; }
+
+    /* Stage general */
+    #app {
+      position:relative;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .stage {
+      width:100vw;
+      height:100vh;
+      transform-origin:center center;
+      transition:transform 1.4s ease-in-out;
+    }
+
+    /* Campo inicial */
+    .field {
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      overflow:hidden;
+    }
+
+    .sky {
+      position:absolute;
+      inset:0;
+      background:linear-gradient(#cfeeff 0%, #e6f7ff 55%);
+    }
+
+    .sun {
+      position:absolute;
+      right:10%;
+      top:8%;
+      width:140px;
+      height:140px;
+      border-radius:50%;
+      background:radial-gradient(#fff7a3, #ffd36b);
+      filter:blur(6px);
+      opacity:0.95;
+      transform:scale(0.9);
+      animation:float 8s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%,100% { transform:translateY(0) scale(0.98); }
+      50% { transform:translateY(-6px) scale(1); }
+    }
+
+    .grass-wrap {
+      position:relative;
+      width:120%;
+      height:40vh;
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      padding-bottom:8vh;
+    }
+
+    .grass {
+      width:2px;
+      height:40vh;
+      background:linear-gradient(#bfe7a6,#85c166);
+      margin:0 4px;
+      border-radius:2px;
+      transform-origin:center bottom;
+      animation:sway 3s ease-in-out infinite;
+    }
+
+    .grass:nth-child(odd) { height:36vh; animation-duration:3.6s; }
+    .grass:nth-child(3n)  { height:42vh; animation-duration:2.8s; }
+
+    @keyframes sway {
+      0%,100% { transform:rotate(-2deg); }
+      50%     { transform:rotate(2deg); }
+    }
+
+    /* Vista del jardín */
+    .garden {
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      pointer-events:none;
+      opacity:0;
+      transition:opacity 1.1s ease;
+    }
+
+    .ground {
+      position:absolute;
+      left:0; right:0; bottom:0;
+      height:50vh;
+      background:linear-gradient(#c8f1a8 0%, #b8e68a 70%);
+      box-shadow:0 -30px 80px rgba(0,0,0,0.06);
+    }
+
+    /* Contenedor de la rosa */
+    .rose-scene {
+      position:relative;
+      width:60vw;
+      max-width:760px;
+      height:60vw;
+      max-height:760px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      pointer-events:auto;
+    }
+
+    svg.rose {
+      width:60%;
+      height:60%;
+      transform-origin:center center;
+      transition:transform 1s ease;
+    }
+
+    /* Pétalos */
+    .petal {
+      cursor:pointer;
+      transform-origin:center 80%;
+      transition:transform .25s ease;
+      filter:drop-shadow(0 6px 10px rgba(0,0,0,0.12));
+    }
+
+    .engraved {
+      font-family:'Times New Roman',serif;
+      font-size:6px;
+      fill:rgba(80,30,50,0.6);
+      paint-order:stroke;
+      stroke:rgba(255,255,255,0.25);
+      stroke-width:0.3;
+    }
+
+    /* Movimiento con viento */
+    .petal.sway {
+      animation: petalSway 4s ease-in-out infinite;
+    }
+
+    @keyframes petalSway {
+      0%   { transform:translateY(0) rotate(0deg); }
+      50%  { transform:translateY(-4px) rotate(3deg); }
+      100% { transform:translateY(0) rotate(0deg); }
+    }
+
+    /* Cuadro de frase */
+    .bubble {
+      position:fixed;
+      left:50%;
+      top:20%;
+      transform:translateX(-50%) scale(0.98);
+      padding:14px 18px;
+      border-radius:12px;
+      background:rgba(255,250,255,0.98);
+      box-shadow:0 6px 30px rgba(0,0,0,0.12);
+      font-size:18px;
+      max-width:80%;
+      text-align:center;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .35s, transform .5s;
+    }
+
+    /* Pétalo volando */
+    .flying {
+      position:fixed;
+      z-index:60;
+      width:120px;
+      height:120px;
+      pointer-events:auto;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .flying svg {
+      width:100%;
+      height:100%;
+    }
+
+    .hint {
+      position:fixed;
+      right:18px;
+      bottom:18px;
+      background:rgba(255,255,255,0.85);
+      padding:8px 12px;
+      border-radius:10px;
+      font-size:13px;
+      color:#222;
+      box-shadow:0 6px 18px rgba(0,0,0,0.08);
+    }
+
+    @media (max-width:600px) {
+      .rose-scene { width:90vw; height:90vw; }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div class="stage" id="stage">
+
+      <!-- Campo inicial -->
+      <div class="field" id="field">
+        <div class="sky"></div>
+        <div class="sun"></div>
+        <div class="grass-wrap" id="grassWrap"></div>
+      </div>
+
+      <!-- Jardín -->
+      <div class="garden" id="garden">
+        <div class="ground"></div>
+
+        <!-- Rosa -->
+        <div class="rose-scene" id="roseScene" aria-hidden="true">
+          <!-- SVG COMPLETO DE LA ROSA -->
+          <svg class="rose" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" aria-label="Rosa">
+            <defs>
+              <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="1.6" result="b"/>
+                <feBlend in="SourceGraphic" in2="b" mode="normal"/>
+              </filter>
+            </defs>
+
+            <!-- Tallos -->
+            <g id="stemGroup">
+              <path d="M200 380 C195 300 220 240 204 200"
+                    stroke="#0b4b27" stroke-width="10" fill="none" stroke-linecap="round"/>
+            </g>
+
+            <!-- Hojas -->
+            <g id="leaves" transform="translate(0,0)">
+              <path d="M180 300 C140 270 110 300 170 310" fill="#0b5c34" opacity="0.95"/>
+              <path d="M220 300 C260 270 290 300 230 310" fill="#0b5c34" opacity="0.95"/>
+            </g>
+
+            <!-- Pétalos -->
+            <g id="petalsGroup" transform="translate(200,160)">
+
+              <!-- Pétalo 0 -->
+              <g class="petalGroup" data-index="0" transform="rotate(0)">
+                <path class="petal"
+                  d="M0 -18 C30 -60 90 -60 70 -10 C50 50 -20 70 -70 30 C-10 0 -2 -6 0 -18Z"
+                  fill="#ffd7ea" filter="url(#soft)"/>
+                <text class="engraved" x="10" y="-6" transform="rotate(6)">
+                  En mi nació un amor inimaginable por ti, me perdí en tus ojos y penetraste mi corazón
+                </text>
+              </g>
+
+              <!-- Pétalo 1 -->
+              <g class="petalGroup" data-index="1" transform="rotate(36)">
+                <path class="petal"
+                  d="M0 -18 C34 -62 96 -58 74 -8 C54 52 -18 72 -74 30 C-8 0 -2 -6 0 -18Z"
+                  fill="#ffc9e3" filter="url(#soft)"/>
+                <text class="engraved" x="18" y="-6" transform="rotate(12)">
+                  Solecito que ilumina todas mis mañanas, haces que me pierda en tus ojos que reflejan el amor del universo y su creación
+                </text>
+              </g>
+
+              <!-- Pétalo 2 -->
+              <g class="petalGroup" data-index="2" transform="rotate(72)">
+                <path class="petal"
+                  d="M0 -16 C28 -58 88 -56 66 -6 C46 54 -16 68 -66 28 C-8 0 -2 -6 0 -16Z"
+                  fill="#ffd0e6" filter="url(#soft)"/>
+                <text class="engraved" x="10" y="-4" transform="rotate(10)">
+                  Tu cuerpo es el templo donde reposo y entrego mi amor y felicidad
+                </text>
+              </g>
+
+              <!-- Pétalo 3 -->
+              <g class="petalGroup" data-index="3" transform="rotate(108)">
+                <path class="petal"
+                  d="M0 -16 C32 -64 94 -58 72 -8 C52 54 -18 70 -72 30 C-10 0 -2 -6 0 -16Z"
+                  fill="#ffd7ea" filter="url(#soft)"/>
+                <text class="engraved" x="12" y="-6" transform="rotate(8)">
+                  Tu cara es un vistazo al amor más puro que ha existido y existirá
+                </text>
+              </g>
+
+              <!-- Pétalo 4 -->
+              <g class="petalGroup" data-index="4" transform="rotate(144)">
+                <path class="petal"
+                  d="M0 -18 C30 -60 88 -62 68 -12 C48 44 -18 70 -68 30 C-8 0 -2 -6 0 -18Z"
+                  fill="#ffc9e3" filter="url(#soft)"/>
+                <text class="engraved" x="12" y="-6" transform="rotate(6)">
+                  Tu personalidad es como un cuento de hadas el cual quieres escuchar todas las noches antes de dormir
+                </text>
+              </g>
+
+              <!-- Pétalo 5 -->
+              <g class="petalGroup" data-index="5" transform="rotate(180)">
+                <path class="petal"
+                  d="M0 -18 C32 -60 92 -60 72 -12 C52 46 -18 70 -72 30 C-8 0 -2 -6 0 -18Z"
+                  fill="#ffd7ea" filter="url(#soft)"/>
+                <text class="engraved" x="10" y="-6" transform="rotate(0)">
+                  Amarte me hace sentir más seguro porque sé lo sincero que es tu corazoncito
+                </text>
+              </g>
+
+              <!-- Pétalo 6 -->
+              <g class="petalGroup" data-index="6" transform="rotate(216)">
+                <path class="petal"
+                  d="M0 -16 C28 -58 86 -56 64 -8 C44 50 -18 66 -64 28 C-8 0 -2 -6 0 -16Z"
+                  fill="#ffc9e3" filter="url(#soft)"/>
+                <text class="engraved" x="8" y="-4" transform="rotate(-6)">
+                  Abrazarte es como fundir mis dolores y dejar florecer mi amor y felicidad
+                </text>
+              </g>
+
+              <!-- Pétalo 7 -->
+              <g class="petalGroup" data-index="7" transform="rotate(252)">
+                <path class="petal"
+                  d="M0 -18 C34 -62 98 -60 76 -10 C56 52 -18 74 -76 32 C-8 0 -2 -6 0 -18Z"
+                  fill="#ffd0e6" filter="url(#soft)"/>
+                <text class="engraved" x="14" y="-6" transform="rotate(-10)">
+                  Cuando te veo a los ojos es como ver un futuro juntos y toda una vida por delante
+                </text>
+              </g>
+
+              <!-- Pétalo 8 -->
+              <g class="petalGroup" data-index="8" transform="rotate(288)">
+                <path class="petal"
+                  d="M0 -18 C30 -60 92 -62 70 -10 C50 48 -18 70 -70 28 C-8 0 -2 -6 0 -18Z"
+                  fill="#ffd7ea" filter="url(#soft)"/>
+                <text class="engraved" x="12" y="-6" transform="rotate(-6)">
+                  Dentro de mis sueños veo nuestra casita, nosotros casados y nada más que amor y comprensión
+                </text>
+              </g>
+
+              <!-- Pétalo 9 -->
+              <g class="petalGroup" data-index="9" transform="rotate(324)">
+                <path class="petal"
+                  d="M0 -18 C32 -64 96 -60 74 -8 C54 50 -18 72 -74 30 C-10 0 -2 -6 0 -18Z"
+                  fill="#ffc9e3" filter="url(#soft)"/>
+                <text class="engraved" x="14" y="-6" transform="rotate(-8)">
+                  Sé que eres el amor de mi vida porque tu nombre y tu ser están grabados en mi cuerpo, alma y mente
+                </text>
+              </g>
+
+              <!-- Centro -->
+              <circle cx="0" cy="0" r="18" fill="#ffbfd9"/>
+
+            </g> <!-- end petalsGroup -->
+          </svg>
+        </div> <!-- roseScene -->
+      </div> <!-- garden -->
+
+      <!-- Burbuja con frase -->
+      <div class="bubble" id="bubble"></div>
+
+      <!-- Botón flotante para dejar caer el pétalo -->
+      <div class="hint" id="dropHint" style="display:none;">
+        Toca “Dejar caer pétalo” ↓
+      </div>
+
+      <button id="dropButton"
+        style="
+        position:fixed;
+        bottom:60px;
+        left:50%;
+        transform:translateX(-50%);
+        padding:12px 22px;
+        font-size:16px;
+        border:none;
+        border-radius:12px;
+        background:#ff9ac8;
+        color:white;
+        box-shadow:0 6px 18px rgba(0,0,0,0.12);
+        display:none;
+        cursor:pointer;">
+        Dejar caer pétalo
+      </button>
+
+    </div><!-- stage -->
+  </div><!-- app -->
+
+<script>
+/* ============================================================
+   🌿 ANIMACIÓN DEL CAMPO (PASTO INICIAL)
+   ============================================================ */
+const grassWrap = document.getElementById("grassWrap");
+for (let i = 0; i < 140; i++) {
+  const g = document.createElement("div");
+  g.className = "grass";
+  grassWrap.appendChild(g);
+}
+
+/* ============================================================
+   🎥 ZOOM DEL CAMPO AL JARDÍN
+   ============================================================ */
+window.addEventListener("load", () => {
+  setTimeout(() => {
+    document.getElementById("stage").style.transform = "scale(1.4)";
+  }, 1200);
+
+  setTimeout(() => {
+    document.getElementById("garden").style.opacity = "1";
+  }, 2600);
+});
+
+/* ============================================================
+   🌹 INTERACCIÓN CON LOS PÉTALOS
+   ============================================================ */
+const petalGroups = document.querySelectorAll(".petalGroup");
+const bubble = document.getElementById("bubble");
+const dropButton = document.getElementById("dropButton");
+const dropHint = document.getElementById("dropHint");
+
+let selectedPetal = null;
+let lockedZoom = false;
+
+/* ------------------------------------------------------------
+   Mostrar frase solo cuando se toca un pétalo
+------------------------------------------------------------- */
+petalGroups.forEach((group) => {
+  group.addEventListener("click", (e) => {
+    e.stopPropagation();
+
+    // Si ya se había seleccionado y está esperando caída, no reactivar
+    if (lockedZoom) return;
+
+    selectedPetal = group;
+
+    // Animación de zoom al pétalo
+    const rose = document.querySelector(".rose");
+    rose.style.transform = "scale(1.7)";
+
+    lockedZoom = true;
+
+    // Mostrar burbuja con frase grabada
+    const textNode = group.querySelector("text").textContent.trim();
+    bubble.textContent = textNode;
+    bubble.style.opacity = "1";
+    bubble.style.transform = "translateX(-50%) scale(1)";
+
+    // Mostrar botón para dejar caer
+    dropButton.style.display = "block";
+    dropHint.style.display = "block";
+  });
+});
+
+/* ------------------------------------------------------------
+   Botón: Dejar caer pétalo
+------------------------------------------------------------- */
+dropButton.addEventListener("click", () => {
+  if (!selectedPetal) return;
+
+  const index = selectedPetal.dataset.index;
+
+  // Crear un clon para animar la caída
+  const flying = document.createElement("div");
+  flying.className = "flying";
+  flying.style.left = "calc(50% - 60px)";
+  flying.style.top = "160px";
+
+  flying.innerHTML = `
+    <svg viewBox="0 0 140 140">
+      ${selectedPetal.innerHTML}
+    </svg>
+  `;
+
+  document.body.appendChild(flying);
+
+  // Animar caída
+  setTimeout(() => {
+    flying.style.transition = "transform 4s ease, opacity 4s";
+    flying.style.transform = "translateY(420px) rotate(50deg)";
+    flying.style.opacity = "0";
+  }, 50);
+
+  // Remover de la rosa
+  selectedPetal.style.opacity = "0";
+  selectedPetal.style.pointerEvents = "none";
+
+  // Ocultar la burbuja
+  bubble.style.opacity = "0";
+
+  // Después de caída
+  setTimeout(() => {
+    flying.remove();
+
+    // Reset zoom
+    const rose = document.querySelector(".rose");
+    rose.style.transform = "scale(1)";
+
+    dropHint.style.display = "none";
+    dropButton.style.display = "none";
+
+    setTimeout(() => {
+      bubble.textContent = "";
+      bubble.style.transform = "translateX(-50%) scale(0.98)";
+      lockedZoom = false;
+      selectedPetal = null;
+    }, 500);
+
+  }, 4200);
+});
+</script>
+
+</body>
+</html>
+
+
